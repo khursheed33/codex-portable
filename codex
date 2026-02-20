@@ -1,0 +1,148 @@
+#!/bin/bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CODEX_DIR="$SCRIPT_DIR/.codex"
+CODEX_BIN="$CODEX_DIR/node_modules/.bin/codex"
+CODEX_HOME="$CODEX_DIR/home"
+CONFIG_JSON="$CODEX_DIR/config.json"
+
+if [ ! -f "$CODEX_BIN" ]; then
+  echo "❌ Not installed. Run: ./.codex/setup.sh"
+  exit 1
+fi
+
+# CRITICAL: Unset any global environment variables that might interfere
+# This ensures we use LOCAL configuration only
+unset CODEX_HOME 2>/dev/null || true
+unset XDG_CONFIG_HOME 2>/dev/null || true
+
+# Load centralized configuration if it exists
+if [ -f "$CONFIG_JSON" ]; then
+  # Check if jq is available for JSON parsing
+  if command -v jq >/dev/null 2>&1; then
+    # Read provider configuration
+    PROVIDER_TYPE=$(jq -r '.provider.type // "azure"' "$CONFIG_JSON")
+    API_KEY_ENV=$(jq -r '.provider.api_key_env // "AZURE_OPENAI_API_KEY"' "$CONFIG_JSON")
+    MODEL=$(jq -r '.provider.model // "gpt-5.1-codex-mini"' "$CONFIG_JSON")
+    
+    # Export provider info as environment variables for potential use
+    export CODEX_PROVIDER_TYPE="$PROVIDER_TYPE"
+    export CODEX_PROVIDER_MODEL="$MODEL"
+    export CODEX_API_KEY_ENV="$API_KEY_ENV"
+  else
+    # Fallback: use defaults if jq is not available
+    PROVIDER_TYPE="azure"
+    API_KEY_ENV="AZURE_OPENAI_API_KEY"
+    MODEL="gpt-5.1-codex-mini"
+  fi
+else
+  # Default configuration if config.json doesn't exist
+  PROVIDER_TYPE="azure"
+  API_KEY_ENV="AZURE_OPENAI_API_KEY"
+  MODEL="gpt-5.1-codex-mini"
+fi
+
+# CRITICAL: Unset global API keys first to prevent interference
+# Then load LOCAL .env file which will override
+unset AZURE_OPENAI_API_KEY 2>/dev/null || true
+unset OPENAI_API_KEY 2>/dev/null || true
+unset ANTHROPIC_API_KEY 2>/dev/null || true
+
+# Load environment variables from LOCAL .env file
+# This takes precedence over any global settings
+if [ -f "$CODEX_DIR/.env" ]; then
+  # Read .env file and export variables, ignoring comments and empty lines
+  while IFS= read -r line || [ -n "$line" ]; do
+    # Skip comments and empty lines
+    [[ "$line" =~ ^[[:space:]]*# ]] && continue
+    [[ -z "${line// }" ]] && continue
+    # Export the variable
+    export "$line" 2>/dev/null || true
+  done < "$CODEX_DIR/.env"
+fi
+
+# Check for API key based on configured provider
+if [[ -z "${!API_KEY_ENV}" || "${!API_KEY_ENV}" == "your-*-api-key-here" ]]; then
+  # Fallback to OPENAI_API_KEY if primary key is not set
+  if [[ -z "$OPENAI_API_KEY" || "$OPENAI_API_KEY" == "sk-your-key-here" ]]; then
+    echo "❌ Set $API_KEY_ENV or OPENAI_API_KEY in .codex/.env"
+    echo "   Current provider: $PROVIDER_TYPE"
+    echo "   Expected env var: $API_KEY_ENV"
+    echo ""
+    echo "   Make sure you're using: ./codex (not just 'codex')"
+    exit 1
+  fi
+fi
+
+# Export API keys (ensure they're set)
+[ -n "$AZURE_OPENAI_API_KEY" ] && export AZURE_OPENAI_API_KEY="$AZURE_OPENAI_API_KEY"
+[ -n "$OPENAI_API_KEY" ] && export OPENAI_API_KEY="$OPENAI_API_KEY"
+[ -n "$ANTHROPIC_API_KEY" ] && export ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY"
+
+# CRITICAL: Set Codex environment variables to point to LOCAL installation
+# These MUST be set to override any global configuration
+export CODEX_HOME="$CODEX_HOME"
+export XDG_CONFIG_HOME="$CODEX_DIR"
+export XDG_DATA_HOME="$CODEX_DIR"
+
+# Add local environment markers
+export CODEX_LOCAL_PROJECT="$SCRIPT_DIR"
+export CODEX_LOCAL_CONFIG="$CODEX_DIR/home/config.toml"
+export CODEX_CENTRALIZED_CONFIG="$CONFIG_JSON"
+
+# Debug: Show what we're using (can be enabled with CODEX_DEBUG=1)
+if [[ "${CODEX_DEBUG:-0}" == "1" ]]; then
+  echo "DEBUG: Using LOCAL Codex installation" >&2
+  echo "DEBUG: CODEX_HOME=$CODEX_HOME" >&2
+  echo "DEBUG: XDG_CONFIG_HOME=$XDG_CONFIG_HOME" >&2
+  echo "DEBUG: Config file: $CODEX_DIR/home/config.toml" >&2
+  echo "DEBUG: API Key Env: $API_KEY_ENV=${!API_KEY_ENV:0:10}..." >&2
+fi
+
+# Show local environment info if --info flag is passed
+if [[ "$1" == "--info" || "$1" == "--local-info" ]]; then
+  echo "┌─────────────────────────────────────────────────────────┐"
+  echo "│  Codex Local Environment Information                    │"
+  echo "└─────────────────────────────────────────────────────────┘"
+  echo ""
+  echo "✓ Running from LOCAL project installation"
+  echo ""
+  echo "Project Root:    $SCRIPT_DIR"
+  echo "Codex Binary:    $CODEX_BIN"
+  echo "Config File:     $CODEX_HOME/config.toml"
+  echo "Central Config:  $CONFIG_JSON"
+  echo "Skills Dir:      $CODEX_HOME/skills"
+  echo ""
+  echo "Provider Configuration:"
+  echo "  Type:           $PROVIDER_TYPE"
+  echo "  Model:          $MODEL"
+  echo "  API Key Env:    $API_KEY_ENV"
+  if [[ -n "${!API_KEY_ENV}" ]]; then
+    echo "  API Key:        ${!API_KEY_ENV:0:10}... (set)"
+  else
+    echo "  API Key:        (not set)"
+  fi
+  echo ""
+  echo "Environment Variables:"
+  echo "  CODEX_HOME:        $CODEX_HOME"
+  echo "  XDG_CONFIG_HOME:   $XDG_CONFIG_HOME"
+  echo "  CODEX_LOCAL_PROJECT: $CODEX_LOCAL_PROJECT"
+  echo ""
+  if [ -f "$CODEX_BIN" ]; then
+    echo "Codex Version:"
+    "$CODEX_BIN" --version 2>/dev/null || echo "  (version info not available)"
+  fi
+  echo ""
+  echo "To verify you're using local Codex, check:"
+  echo "  1. CODEX_HOME environment variable points to: $CODEX_HOME"
+  echo "  2. Config file exists at: $CODEX_HOME/config.toml"
+  echo "  3. Centralized config at: $CONFIG_JSON"
+  echo "  4. This script is at: $SCRIPT_DIR/codex"
+  echo ""
+  echo "⚠️  IMPORTANT: Always use './codex' not 'codex' to use local installation"
+  echo ""
+  exit 0
+fi
+
+# Pass ALL arguments through exactly as-is to codex
+# So `./codex` opens interactive, `./codex "do this"` runs one-shot
+exec "$CODEX_BIN" "$@"

@@ -1,0 +1,29 @@
+{
+  "provider": {
+    "type": "azure",
+    "api_key_env": "AZURE_OPENAI_API_KEY",
+    "model": "gpt-5.1-codex-mini",
+    "base_url": "https://deployment-name.openai.azure.com/openai",
+    "api_version": "2025-04-01-preview"
+  },
+  "overrides": {
+    "model": null,
+    "model_provider": null,
+    "approval_policy": null,
+    "sandbox_mode": null
+  },
+  "mcp_servers": {
+    "enabled": ["filesystem"],
+    "filesystem": {
+      "enabled": true,
+      "args": [".", ".codex/home/skills"]
+    }
+  },
+  "features": {
+    "powershell_utf8": true,
+    "shell_snapshot": true,
+    "collaboration_modes": true,
+    "multi_agent": true,
+    "web_search": false
+  }
+}

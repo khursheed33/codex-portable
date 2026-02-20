@@ -1,0 +1,16 @@
+# .gitignore
+.codex/node_modules/
+.codex/.env
+.codex/home/sessions/
+.codex/home/tmp/
+.codex/mcp/servers/
+
+# Note: .codex/config.json should be COMMITTED (it's the project config)
+# Only .codex/.env is gitignored (contains secrets)
+
+.env
+log/
+sessions/
+tmp/
+mcp/servers/
+config.toml

@@ -1,0 +1,9 @@
+{
+  "name": "codex-local",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@openai/codex": "latest",
+    "@modelcontextprotocol/server-filesystem": "latest"
+  }
+}
