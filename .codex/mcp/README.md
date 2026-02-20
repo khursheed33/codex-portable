@@ -34,7 +34,18 @@ cd .codex\mcp
 powershell -ExecutionPolicy Bypass -File .\setup-simple.ps1
 ```
 
-### On Linux/Mac or Git Bash (Windows):
+### On Linux/Mac:
+```bash
+cd .codex/mcp
+bash setup.sh
+```
+
+**Note:** On Linux, you may need to make the script executable first:
+```bash
+chmod +x .codex/mcp/setup.sh
+```
+
+### On Windows (Git Bash):
 ```bash
 cd .codex/mcp
 bash setup.sh

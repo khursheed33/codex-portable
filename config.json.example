@@ -3,7 +3,7 @@
     "type": "azure",
     "api_key_env": "AZURE_OPENAI_API_KEY",
     "model": "gpt-5.1-codex-mini",
-    "base_url": "https://deployment-name.openai.azure.com/openai",
+    "base_url": "https://your-deployment-name.openai.azure.com/openai",
     "api_version": "2025-04-01-preview"
   },
   "overrides": {

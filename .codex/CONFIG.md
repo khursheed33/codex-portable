@@ -8,9 +8,12 @@ This project uses a centralized configuration system that makes it easy to:
 
 ## Configuration Files
 
-1. **`.codex/config.json`** - Centralized configuration (JSON)
-2. **`.codex/.env`** - API keys and secrets (gitignored)
-3. **`.codex/home/config.toml`** - Codex runtime configuration (can be overridden)
+All configuration files are now in the **root directory** for easy management:
+
+1. **`config.json`** (root) - Centralized configuration (JSON)
+2. **`codex.toml`** (root) - Codex runtime configuration (TOML)
+3. **`.codex/.env`** - API keys and secrets (gitignored)
+4. **`.codex/home/config.toml`** - Auto-linked from root `codex.toml` (don't edit directly)
 
 ## Quick Start
 
@@ -44,7 +47,7 @@ bash config-manager.sh set-key "your-api-key-here"
 
 ### Switch to OpenAI
 
-1. Edit `.codex/config.json`:
+1. Edit `config.json` (in root directory):
 ```json
 {
   "provider": {
@@ -62,7 +65,7 @@ bash config-manager.sh set-key "your-api-key-here"
 .\config-manager.ps1 set-key -ApiKey "sk-your-openai-key"
 ```
 
-3. Update `.codex/home/config.toml` to match:
+3. Update `codex.toml` (in root directory) to match:
 ```toml
 model_provider = "openai"
 model = "gpt-4"
@@ -75,7 +78,7 @@ env_key = "OPENAI_API_KEY"
 
 ### Switch to Anthropic
 
-1. Edit `.codex/config.json`:
+1. Edit `config.json` (in root directory):
 ```json
 {
   "provider": {
@@ -93,11 +96,11 @@ env_key = "OPENAI_API_KEY"
 .\config-manager.ps1 set-key -ApiKey "sk-ant-your-key"
 ```
 
-3. Update `.codex/home/config.toml` accordingly.
+3. Update `codex.toml` (in root directory) accordingly.
 
 ### Switch Back to Azure
 
-1. Edit `.codex/config.json`:
+1. Edit `config.json` (in root directory):
 ```json
 {
   "provider": {
@@ -129,7 +132,7 @@ env_key = "OPENAI_API_KEY"
 ```
 
 **Linux/Mac:**
-Edit `.codex/config.json` directly:
+Edit `config.json` (in root directory) directly:
 ```json
 {
   "mcp_servers": {
@@ -145,7 +148,7 @@ Edit `.codex/config.json` directly:
 }
 ```
 
-Then update `.codex/home/config.toml` to add/remove MCP server sections.
+Then update `codex.toml` (in root directory) to add/remove MCP server sections.
 
 ## Configuration Structure
 
@@ -190,9 +193,11 @@ The `overrides` section in `config.json` can be used to override settings in `co
 ## Best Practices
 
 1. **Never commit `.env`** - It's already in `.gitignore`
-2. **Commit `config.json`** - It defines your project's Codex setup (without secrets)
-3. **Document provider changes** - Update README when switching providers
-4. **Use config manager** - Use the scripts instead of editing JSON directly when possible
+2. **Commit `config.json` and `codex.toml`** - They define your project's Codex setup (without secrets)
+3. **Edit configs in root** - All config files are in the root directory for easy access
+4. **Don't edit `.codex/home/config.toml` directly** - It's auto-linked from root `codex.toml`
+5. **Document provider changes** - Update README when switching providers
+6. **Use config manager** - Use the scripts instead of editing JSON directly when possible
 
 ## Troubleshooting
 
@@ -210,6 +215,7 @@ The `overrides` section in `config.json` can be used to override settings in `co
 
 ### Provider switch not working
 
-- Update both `config.json` AND `config.toml`
+- Update both `config.json` AND `codex.toml` (both in root directory)
 - Restart Codex after changes
 - Check `./codex --info` to verify settings
+- The launcher automatically links root `codex.toml` to `.codex/home/config.toml`

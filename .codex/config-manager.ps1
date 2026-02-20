@@ -24,8 +24,10 @@ param(
     [switch]$Disable
 )
 
-$CONFIG_FILE = Join-Path $PSScriptRoot "config.json"
-$ENV_FILE = Join-Path $PSScriptRoot ".env"
+# All config files are centralized in project root
+$PROJECT_ROOT = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$CONFIG_FILE = Join-Path $PROJECT_ROOT "config.json"
+$ENV_FILE = Join-Path $PROJECT_ROOT ".env"
 
 function Show-Config {
     Write-Host ""

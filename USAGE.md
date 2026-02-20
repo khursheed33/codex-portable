@@ -2,6 +2,25 @@
 
 ## Quick Start Guide
 
+### Platform-Specific Setup
+
+**Linux/Mac:**
+```bash
+# Make scripts executable
+bash make-executable.sh
+
+# Run setup
+cd .codex
+bash setup.sh
+cd ..
+```
+
+**Windows:**
+```batch
+cd .codex
+setup.bat
+```
+
 ### Step 1: Initial Setup (One-time)
 
 #### 1.1 Install Codex Dependencies
@@ -13,6 +32,12 @@ npm install
 This installs the `@openai/codex` package locally.
 
 #### 1.2 Setup MCP Servers
+
+**On Linux/Mac:**
+```bash
+cd .codex/mcp
+bash setup.sh
+```
 
 **On Windows (Easiest - Just double-click):**
 ```batch
@@ -28,7 +53,7 @@ cd .codex\mcp
 .\setup.ps1
 ```
 
-**On Linux/Mac or Git Bash:**
+**On Windows (Git Bash):**
 ```bash
 cd .codex/mcp
 bash setup.sh
@@ -39,9 +64,27 @@ This will:
 - Build the filesystem server
 - Take a few minutes the first time
 
-#### 1.3 Configure API Keys
+#### 1.3 Setup Configuration Files
 
-Edit `.codex/.env` file and add your Azure OpenAI API key:
+**On Linux/Mac:**
+```bash
+cd .codex
+bash setup-config.sh
+cd ..
+```
+
+**On Windows:**
+```batch
+cd .codex
+setup-config.bat
+```
+
+This creates `config.json` and `codex.toml` from example files.
+Then edit them with your actual values (endpoints, deployment names).
+
+#### 1.4 Configure API Keys
+
+Edit `.env` file (root directory) and add your Azure OpenAI API key:
 
 ```
 AZURE_OPENAI_API_KEY=your-actual-azure-api-key-here
@@ -60,19 +103,29 @@ OPENAI_API_KEY=sk-your-actual-key-here
 
 #### Option A: Interactive Mode (TUI)
 
+**On Linux/Mac:**
+```bash
+./codex
+```
+
 **On Windows (Git Bash or WSL):**
 ```bash
 ./codex
 ```
 
-**On Windows (PowerShell - if you have bash):**
-```bash
-bash codex
+**On Windows (PowerShell):**
+```powershell
+.\codex.ps1
 ```
 
-**On Linux/Mac:**
+**On Windows (Command Prompt):**
+```batch
+codex.bat
+```
+
+**Note:** On Linux, make sure the script is executable:
 ```bash
-./codex
+chmod +x codex
 ```
 
 This opens an interactive terminal UI where you can:
@@ -204,8 +257,8 @@ cd .codex
 npm install
 ```
 
-### Issue: "Set AZURE_OPENAI_API_KEY in .codex/.env"
-**Solution:** Edit `.codex/.env` and add your API key:
+### Issue: "Set AZURE_OPENAI_API_KEY in .env"
+**Solution:** Edit `.env` (root directory) and add your API key:
 ```
 AZURE_OPENAI_API_KEY=your-key-here
 ```

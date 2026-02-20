@@ -1,16 +1,22 @@
 # .gitignore
 .codex/node_modules/
-.codex/.env
 .codex/home/sessions/
 .codex/home/tmp/
+.codex/home/config.toml  # Auto-copied from root at runtime (don't commit)
 .codex/mcp/servers/
 
-# Note: .codex/config.json should be COMMITTED (it's the project config)
-# Only .codex/.env is gitignored (contains secrets)
-
+# Configuration files (centralized in root - may contain sensitive info)
+config.json
+codex.toml
 .env
+
+# Example files should be committed (they're templates)
+# config.json.example
+# codex.toml.example
+# .example.env
+
+# Runtime data
 log/
 sessions/
 tmp/
 mcp/servers/
-config.toml

@@ -8,7 +8,10 @@ $CODEX_DIR = Join-Path $SCRIPT_DIR ".codex"
 $CODEX_BIN = Join-Path $CODEX_DIR "node_modules\.bin\codex.cmd"
 $CODEX_BIN_ALT = Join-Path $CODEX_DIR "node_modules\.bin\codex"
 $CODEX_HOME = Join-Path $CODEX_DIR "home"
-$CONFIG_JSON = Join-Path $CODEX_DIR "config.json"
+# All config files are centralized in root directory
+$CONFIG_JSON = Join-Path $SCRIPT_DIR "config.json"
+$CONFIG_TOML = Join-Path $SCRIPT_DIR "codex.toml"
+$ENV_FILE = Join-Path $SCRIPT_DIR ".env"
 
 # Check if binary exists
 $codexBinary = $null
@@ -50,8 +53,7 @@ if (Test-Path $CONFIG_JSON) {
 [Environment]::SetEnvironmentVariable("OPENAI_API_KEY", $null, "Process")
 [Environment]::SetEnvironmentVariable("ANTHROPIC_API_KEY", $null, "Process")
 
-# Load local .env file
-$ENV_FILE = Join-Path $CODEX_DIR ".env"
+# Load .env file from root (centralized)
 if (Test-Path $ENV_FILE) {
     Get-Content $ENV_FILE | ForEach-Object {
         if ($_ -match '^\s*([^#=]+)=(.*)$') {
@@ -69,7 +71,7 @@ $apiKey = [Environment]::GetEnvironmentVariable($API_KEY_ENV, "Process")
 if (-not $apiKey -or $apiKey -match "your-.*-key-here") {
     $fallbackKey = [Environment]::GetEnvironmentVariable("OPENAI_API_KEY", "Process")
     if (-not $fallbackKey -or $fallbackKey -match "sk-your-key-here") {
-        Write-Host "ERROR: Set $API_KEY_ENV or OPENAI_API_KEY in .codex/.env" -ForegroundColor Red
+        Write-Host "ERROR: Set $API_KEY_ENV or OPENAI_API_KEY in .env (root directory)" -ForegroundColor Red
         Write-Host "  Current provider: $PROVIDER_TYPE" -ForegroundColor Yellow
         Write-Host "  Expected env var: $API_KEY_ENV" -ForegroundColor Yellow
         Write-Host ""
@@ -83,7 +85,26 @@ if (-not $apiKey -or $apiKey -match "your-.*-key-here") {
 [Environment]::SetEnvironmentVariable("XDG_CONFIG_HOME", $CODEX_DIR, "Process")
 [Environment]::SetEnvironmentVariable("XDG_DATA_HOME", $CODEX_DIR, "Process")
 [Environment]::SetEnvironmentVariable("CODEX_LOCAL_PROJECT", $SCRIPT_DIR, "Process")
-[Environment]::SetEnvironmentVariable("CODEX_LOCAL_CONFIG", (Join-Path $CODEX_HOME "config.toml"), "Process")
+# Always copy/link root codex.toml to where Codex expects it (at runtime)
+# This ensures we always use the centralized config
+if (Test-Path $CONFIG_TOML) {
+    # Ensure .codex/home directory exists
+    if (-not (Test-Path $CODEX_HOME)) {
+        New-Item -ItemType Directory -Path $CODEX_HOME -Force | Out-Null
+    }
+    # Try symlink first (better), fallback to copy (works on Windows)
+    try {
+        New-Item -ItemType SymbolicLink -Path (Join-Path $CODEX_HOME "config.toml") -Target $CONFIG_TOML -Force | Out-Null
+    } catch {
+        Copy-Item $CONFIG_TOML (Join-Path $CODEX_HOME "config.toml") -Force | Out-Null
+    }
+} else {
+    Write-Host "ERROR: Config file not found: $CONFIG_TOML" -ForegroundColor Red
+    Write-Host "  Run: cd .codex; bash setup-config.sh" -ForegroundColor Yellow
+    exit 1
+}
+
+[Environment]::SetEnvironmentVariable("CODEX_LOCAL_CONFIG", $CONFIG_TOML, "Process")
 
 # Handle --info flag
 if ($args -contains "--info" -or $args -contains "--local-info") {
@@ -96,8 +117,9 @@ if ($args -contains "--info" -or $args -contains "--local-info") {
     Write-Host ""
     Write-Host "Project Root:    $SCRIPT_DIR"
     Write-Host "Codex Binary:    $codexBinary"
-    Write-Host "Config File:     $(Join-Path $CODEX_HOME 'config.toml')"
-    Write-Host "Central Config:  $CONFIG_JSON"
+    Write-Host "Config File:     $CONFIG_TOML (root)"
+    Write-Host "Config Link:     $(Join-Path $CODEX_HOME 'config.toml')"
+    Write-Host "Central Config:  $CONFIG_JSON (root)"
     Write-Host "Skills Dir:      $(Join-Path $CODEX_HOME 'skills')"
     Write-Host ""
     Write-Host "Provider Configuration:"

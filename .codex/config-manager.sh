@@ -2,8 +2,11 @@
 # Codex Configuration Manager (Bash version)
 # Manages centralized configuration for Codex
 
-CONFIG_FILE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/config.json"
-ENV_FILE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.env"
+# All config files are centralized in project root
+MCP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$MCP_DIR/.." && pwd)"
+CONFIG_FILE="$PROJECT_ROOT/config.json"
+ENV_FILE="$PROJECT_ROOT/.env"
 ACTION="${1:-show}"
 
 show_config() {

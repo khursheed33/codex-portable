@@ -28,7 +28,14 @@ echo "✅ Installed → .codex/node_modules/"
 mkdir -p "$CODEX_HOME"/{skills,sessions,tmp}
 
 # ── Write config.toml ────────────────────────────────────────────────────────
-cat > "$CODEX_HOME/config.toml" << TOML
+# Check if root codex.toml exists, if not create from example
+if [ ! -f "$PROJECT_ROOT/codex.toml" ]; then
+  if [ -f "$PROJECT_ROOT/codex.toml.example" ]; then
+    cp "$PROJECT_ROOT/codex.toml.example" "$PROJECT_ROOT/codex.toml"
+    echo "✅ Created codex.toml from example (update with your values)"
+  else
+    # Create basic config.toml in home directory as fallback
+    cat > "$CODEX_HOME/config.toml" << TOML
 model         = "codex-mini-latest"
 approval_mode = "suggest"
 
@@ -39,16 +46,23 @@ args    = [
   "$CODEX_DIR/node_modules/@modelcontextprotocol/server-filesystem/dist/index.js",
   "$PROJECT_ROOT"
 ]
-
-[[mcp_servers]]
-name    = "git"
-command = "node"
-args    = [
-  "$CODEX_DIR/node_modules/@modelcontextprotocol/server-git/dist/index.js",
-  "--repository", "$PROJECT_ROOT"
-]
 TOML
-echo "✅ config.toml written"
+    echo "✅ config.toml written (basic)"
+  fi
+else
+  # Link root codex.toml to home directory
+  ln -sf "$PROJECT_ROOT/codex.toml" "$CODEX_HOME/config.toml" 2>/dev/null || \
+  cp "$PROJECT_ROOT/codex.toml" "$CODEX_HOME/config.toml" 2>/dev/null || true
+  echo "✅ Linked codex.toml from root"
+fi
+
+# ── Setup config.json if needed ──────────────────────────────────────────────
+if [ ! -f "$PROJECT_ROOT/config.json" ]; then
+  if [ -f "$PROJECT_ROOT/config.json.example" ]; then
+    cp "$PROJECT_ROOT/config.json.example" "$PROJECT_ROOT/config.json"
+    echo "✅ Created config.json from example (update with your values)"
+  fi
+fi
 
 # ── Starter skills ───────────────────────────────────────────────────────────
 cat > "$CODEX_HOME/skills/project-context.md" << SKILL
@@ -67,38 +81,13 @@ if [ ! -f "$CODEX_DIR/.env" ]; then
   echo "⚠️  Add your key → .codex/.env"
 fi
 
-# ── Write the project root `codex` launcher ──────────────────────────────────
-cat > "$PROJECT_ROOT/codex" << 'LAUNCHER'
-#!/bin/bash
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CODEX_DIR="$SCRIPT_DIR/.codex"
-CODEX_BIN="$CODEX_DIR/node_modules/.bin/codex"
-CODEX_HOME="$CODEX_DIR/home"
-
-if [ ! -f "$CODEX_BIN" ]; then
-  echo "❌ Not installed. Run: ./.codex/setup.sh"
-  exit 1
-fi
-
-[ -f "$CODEX_DIR/.env" ] && export $(grep -v '^#' "$CODEX_DIR/.env" | xargs)
-
-if [[ -z "$OPENAI_API_KEY" || "$OPENAI_API_KEY" == "sk-your-key-here" ]]; then
-  echo "❌ Set OPENAI_API_KEY in .codex/.env"
-  exit 1
-fi
-
-export OPENAI_API_KEY="$OPENAI_API_KEY"
-export CODEX_HOME="$CODEX_HOME"
-export XDG_CONFIG_HOME="$CODEX_DIR"
-
-# Pass ALL arguments through exactly as-is to codex
-# So `./codex` opens interactive, `./codex "do this"` runs one-shot
-exec "$CODEX_BIN" "$@"
-LAUNCHER
-
-chmod +x "$PROJECT_ROOT/codex"
-chmod +x "$CODEX_DIR/setup.sh"
-echo "✅ ./codex launcher created at project root"
+# ── Make scripts executable ────────────────────────────────────────────────
+chmod +x "$PROJECT_ROOT/codex" 2>/dev/null || true
+chmod +x "$CODEX_DIR/setup.sh" 2>/dev/null || true
+chmod +x "$CODEX_DIR/setup-config.sh" 2>/dev/null || true
+chmod +x "$CODEX_DIR/mcp/setup.sh" 2>/dev/null || true
+chmod +x "$CODEX_DIR/config-manager.sh" 2>/dev/null || true
+echo "✅ Made scripts executable"
 
 echo ""
 echo "┌──────────────────────────────────────────┐"

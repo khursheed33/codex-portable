@@ -2,8 +2,11 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CODEX_DIR="$SCRIPT_DIR/.codex"
 CODEX_BIN="$CODEX_DIR/node_modules/.bin/codex"
-CODEX_HOME="$CODEX_DIR/home"
-CONFIG_JSON="$CODEX_DIR/config.json"
+CODEX_HOME="$SCRIPT_DIR/.codex/home"
+# All config files are centralized in root directory
+CONFIG_JSON="$SCRIPT_DIR/config.json"
+CONFIG_TOML="$SCRIPT_DIR/codex.toml"
+ENV_FILE="$SCRIPT_DIR/.env"
 
 if [ ! -f "$CODEX_BIN" ]; then
   echo "❌ Not installed. Run: ./.codex/setup.sh"
@@ -15,7 +18,7 @@ fi
 unset CODEX_HOME 2>/dev/null || true
 unset XDG_CONFIG_HOME 2>/dev/null || true
 
-# Load centralized configuration if it exists
+# Load centralized configuration if it exists (from root)
 if [ -f "$CONFIG_JSON" ]; then
   # Check if jq is available for JSON parsing
   if command -v jq >/dev/null 2>&1; then
@@ -47,9 +50,9 @@ unset AZURE_OPENAI_API_KEY 2>/dev/null || true
 unset OPENAI_API_KEY 2>/dev/null || true
 unset ANTHROPIC_API_KEY 2>/dev/null || true
 
-# Load environment variables from LOCAL .env file
+# Load environment variables from root .env file (centralized)
 # This takes precedence over any global settings
-if [ -f "$CODEX_DIR/.env" ]; then
+if [ -f "$ENV_FILE" ]; then
   # Read .env file and export variables, ignoring comments and empty lines
   while IFS= read -r line || [ -n "$line" ]; do
     # Skip comments and empty lines
@@ -57,14 +60,14 @@ if [ -f "$CODEX_DIR/.env" ]; then
     [[ -z "${line// }" ]] && continue
     # Export the variable
     export "$line" 2>/dev/null || true
-  done < "$CODEX_DIR/.env"
+  done < "$ENV_FILE"
 fi
 
 # Check for API key based on configured provider
 if [[ -z "${!API_KEY_ENV}" || "${!API_KEY_ENV}" == "your-*-api-key-here" ]]; then
   # Fallback to OPENAI_API_KEY if primary key is not set
   if [[ -z "$OPENAI_API_KEY" || "$OPENAI_API_KEY" == "sk-your-key-here" ]]; then
-    echo "❌ Set $API_KEY_ENV or OPENAI_API_KEY in .codex/.env"
+    echo "❌ Set $API_KEY_ENV or OPENAI_API_KEY in .env (root directory)"
     echo "   Current provider: $PROVIDER_TYPE"
     echo "   Expected env var: $API_KEY_ENV"
     echo ""
@@ -78,6 +81,20 @@ fi
 [ -n "$OPENAI_API_KEY" ] && export OPENAI_API_KEY="$OPENAI_API_KEY"
 [ -n "$ANTHROPIC_API_KEY" ] && export ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY"
 
+# Always copy/link root codex.toml to where Codex expects it (at runtime)
+# This ensures we always use the centralized config
+if [ -f "$CONFIG_TOML" ]; then
+  # Ensure .codex/home directory exists
+  mkdir -p "$CODEX_HOME"
+  # Try symlink first (better), fallback to copy (works on Windows)
+  ln -sf "$CONFIG_TOML" "$CODEX_HOME/config.toml" 2>/dev/null || \
+  cp -f "$CONFIG_TOML" "$CODEX_HOME/config.toml" 2>/dev/null || true
+else
+  echo "❌ Config file not found: $CONFIG_TOML"
+  echo "   Run: cd .codex && bash setup-config.sh"
+  exit 1
+fi
+
 # CRITICAL: Set Codex environment variables to point to LOCAL installation
 # These MUST be set to override any global configuration
 export CODEX_HOME="$CODEX_HOME"
@@ -86,7 +103,7 @@ export XDG_DATA_HOME="$CODEX_DIR"
 
 # Add local environment markers
 export CODEX_LOCAL_PROJECT="$SCRIPT_DIR"
-export CODEX_LOCAL_CONFIG="$CODEX_DIR/home/config.toml"
+export CODEX_LOCAL_CONFIG="$CONFIG_TOML"
 export CODEX_CENTRALIZED_CONFIG="$CONFIG_JSON"
 
 # Debug: Show what we're using (can be enabled with CODEX_DEBUG=1)
@@ -94,7 +111,7 @@ if [[ "${CODEX_DEBUG:-0}" == "1" ]]; then
   echo "DEBUG: Using LOCAL Codex installation" >&2
   echo "DEBUG: CODEX_HOME=$CODEX_HOME" >&2
   echo "DEBUG: XDG_CONFIG_HOME=$XDG_CONFIG_HOME" >&2
-  echo "DEBUG: Config file: $CODEX_DIR/home/config.toml" >&2
+  echo "DEBUG: Config file: $CONFIG_TOML" >&2
   echo "DEBUG: API Key Env: $API_KEY_ENV=${!API_KEY_ENV:0:10}..." >&2
 fi
 
@@ -108,8 +125,9 @@ if [[ "$1" == "--info" || "$1" == "--local-info" ]]; then
   echo ""
   echo "Project Root:    $SCRIPT_DIR"
   echo "Codex Binary:    $CODEX_BIN"
-  echo "Config File:     $CODEX_HOME/config.toml"
-  echo "Central Config:  $CONFIG_JSON"
+  echo "Config File:     $CONFIG_TOML (root)"
+  echo "Config Link:     $CODEX_HOME/config.toml"
+  echo "Central Config:  $CONFIG_JSON (root)"
   echo "Skills Dir:      $CODEX_HOME/skills"
   echo ""
   echo "Provider Configuration:"
@@ -134,8 +152,8 @@ if [[ "$1" == "--info" || "$1" == "--local-info" ]]; then
   echo ""
   echo "To verify you're using local Codex, check:"
   echo "  1. CODEX_HOME environment variable points to: $CODEX_HOME"
-  echo "  2. Config file exists at: $CODEX_HOME/config.toml"
-  echo "  3. Centralized config at: $CONFIG_JSON"
+  echo "  2. Config file exists at: $CONFIG_TOML (root)"
+  echo "  3. Centralized config at: $CONFIG_JSON (root)"
   echo "  4. This script is at: $SCRIPT_DIR/codex"
   echo ""
   echo "⚠️  IMPORTANT: Always use './codex' not 'codex' to use local installation"

@@ -1,0 +1,67 @@
+# Codex Configuration
+# Copy this file to codex.toml and update with your actual values
+# This file is in the root directory for easy management
+
+# Set the default model and provider
+model_provider = "azure"
+windows_wsl_setup_acknowledged = true
+model = "gpt-5.1-codex-mini"
+personality = "pragmatic"
+
+stream_idle_timeout_ms = 7200000  # 2 hours (increased for stability)
+request_max_retries = 15  # Increased retries
+request_retry_delay_ms = 2000  # 2 second delay between retries
+request_timeout_ms = 300000  # 5 minute timeout per request
+
+# Permissions & Access (Full Access)
+[approval]
+policy = "never"
+
+# Sandbox configuration for code execution safety
+[sandbox]
+mode = "danger-full-access"
+
+model_provider = "azure"
+model = "gpt-5.1-codex-mini"   # must equal Azure deployment name
+
+[model_providers.azure]
+name = "Azure OpenAI"
+base_url = "https://your-deployment-name.openai.azure.com/openai"
+query_params = { "api-version" = "2025-04-01-preview" }
+env_key = "AZURE_OPENAI_API_KEY"
+wire_api = "responses"
+
+# Features that can be enabled/disabled
+[features]
+powershell_utf8 = true
+shell_snapshot = true
+collaboration_modes = true
+multi_agent = true
+# web_search = true
+
+# MCP Servers (Long Running)
+[mcp_servers.filesystem]
+command = "node"
+args = [
+  ".codex/mcp/servers/src/filesystem/dist/index.js",
+  ".",
+  ".codex/home/skills"
+]
+cwd = "."
+startup_timeout_sec = 60  # Increased startup timeout
+tool_timeout_sec = 3600
+
+# Notices and prompts
+[notice]
+hide_gpt5_1_migration_prompt = true
+
+# Project-specific trust levels
+# Update the path below to match your actual project root
+# On Windows: Use format like 'D:\\PROJECTS\\codex-app' or 'D:\PROJECTS\codex-app'
+# On Linux/Mac: Use format like '/home/user/projects/codex-app'
+# [projects.'/path/to/your/project']
+# trust_level = "trusted"
+
+# Windows-specific settings (ignored on Linux/Mac)
+[windows]
+sandbox = "unelevated"
